@@ -1,0 +1,10 @@
+# AI-ML Intelligent Dead Reckoning System (SIH26168) - Pinned Dependencies
+torch>=2.2.0
+numpy>=1.26.0,<2.7.0
+scipy>=1.11.0
+filterpy>=1.4.5
+lightgbm>=4.3.0
+scikit-learn>=1.4.0
+matplotlib>=3.8.0
+pandas>=2.1.0
+pytest>=8.0.0
