@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <Button
+        android:id="@+id/startStreamingButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Start Streaming" />
+
+    <Button
+        android:id="@+id/stopStreamingButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="Stop Streaming" />
+
+    <TextView
+        android:id="@+id/connectionStatusTextView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:gravity="center"
+        android:text="Idle"
+        android:textSize="18sp" />
+</LinearLayout>
