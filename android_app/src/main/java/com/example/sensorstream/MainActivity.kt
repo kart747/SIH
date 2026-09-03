@@ -19,33 +19,57 @@ class MainActivity : AppCompatActivity() {
     private lateinit var startButton: Button
     private lateinit var stopButton: Button
     private lateinit var connectionStatusText: TextView
+    private lateinit var positionXText: TextView
+    private lateinit var positionYText: TextView
+    private lateinit var headingText: TextView
+    private lateinit var speedText: TextView
+    private lateinit var stepCountText: TextView
+    private lateinit var permissionLauncher: androidx.activity.result.ActivityResultLauncher<Array<String>>
 
-    private val permissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { results ->
-        val allGranted = results.all { it.value }
-        if (allGranted) {
-            startStreamingSession()
-            updateStatus("Permissions granted")
-        } else {
-            updateStatus("Permissions required to stream")
-        }
-    }
-
+    // BroadcastReceiver for status updates from SensorService
     private val statusReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            val status = intent?.getStringExtra(SensorService.EXTRA_STATUS) ?: "Idle"
-            updateStatus(status)
+            when (intent?.action) {
+                SensorService.ACTION_STATUS_UPDATE -> {
+                    val status = intent.getStringExtra(SensorService.EXTRA_STATUS) ?: return
+                    updateStatus(status)
+                }
+                SensorService.ACTION_DR_UPDATE -> {
+                    val posX = intent.getDoubleExtra(SensorService.EXTRA_POS_X, 0.0)
+                    val posY = intent.getDoubleExtra(SensorService.EXTRA_POS_Y, 0.0)
+                    val heading = intent.getDoubleExtra(SensorService.EXTRA_HEADING, 0.0)
+                    val speed = intent.getDoubleExtra(SensorService.EXTRA_SPEED, 0.0)
+                    val steps = intent.getIntExtra(SensorService.EXTRA_STEPS, 0)
+                    updateDrDisplay(posX, posY, heading, speed, steps)
+                }
+            }
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        permissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) { results ->
+            val allGranted = results.all { it.value }
+            if (allGranted) {
+                startStreamingSession()
+                updateStatus("Permissions granted — streaming")
+            } else {
+                updateStatus("Permissions required to stream")
+            }
+        }
+
         setContentView(R.layout.activity_main)
 
         startButton = findViewById(R.id.startStreamingButton)
         stopButton = findViewById(R.id.stopStreamingButton)
         connectionStatusText = findViewById(R.id.connectionStatusTextView)
+        positionXText = findViewById(R.id.positionXTextView)
+        positionYText = findViewById(R.id.positionYTextView)
+        headingText = findViewById(R.id.headingTextView)
+        speedText = findViewById(R.id.speedTextView)
+        stepCountText = findViewById(R.id.stepCountTextView)
 
         startButton.setOnClickListener {
             requestRequiredPermissions()
@@ -59,24 +83,29 @@ class MainActivity : AppCompatActivity() {
         updateStatus("Idle")
     }
 
-    override fun onStart() {
-        super.onStart()
-        registerReceiver(statusReceiver, IntentFilter(SensorService.ACTION_STATUS_UPDATE))
+    override fun onResume() {
+        super.onResume()
+        val filter = IntentFilter().apply {
+            addAction(SensorService.ACTION_STATUS_UPDATE)
+            addAction(SensorService.ACTION_DR_UPDATE)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(statusReceiver, filter, RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(statusReceiver, filter)
+        }
     }
 
-    override fun onStop() {
-        super.onStop()
+    override fun onPause() {
+        super.onPause()
         unregisterReceiver(statusReceiver)
     }
 
     private fun requestRequiredPermissions() {
         val permissions = mutableListOf(
-            Manifest.permission.ACCESS_FINE_LOCATION
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
         )
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            permissions.add(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             permissions.add(Manifest.permission.POST_NOTIFICATIONS)
@@ -91,6 +120,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        updateStatus("Requesting permissions...")
         permissionLauncher.launch(missing.toTypedArray())
     }
 
@@ -101,5 +131,13 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateStatus(message: String) {
         connectionStatusText.text = message
+    }
+
+    private fun updateDrDisplay(posX: Double, posY: Double, heading: Double, speed: Double, steps: Int) {
+        positionXText.text = String.format("North: %.2f m", posX)
+        positionYText.text = String.format("East:  %.2f m", posY)
+        headingText.text = String.format("Heading: %.1f°", heading)
+        speedText.text = String.format("Speed: %.2f m/s", speed)
+        stepCountText.text = String.format("Steps: %d", steps)
     }
 }

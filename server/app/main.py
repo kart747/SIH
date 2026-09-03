@@ -131,17 +131,18 @@ def ingest(payload: IngestPayload):
                 shp_pos = getattr(pos_ned, "shape", None)
                 shp_vel = getattr(vel_ned, "shape", None)
                 raise HTTPException(status_code=500, detail=f"fusion update_gnss error: {e} pos={repr(pos_ned)} pos.shape={shp_pos} vel={repr(vel_ned)} vel.shape={shp_vel}")
-            elif gnss_obj.pos_ned is not None:
-                # Direct NED sample provided
-                pos_ned = np.asarray(gnss_obj.pos_ned, dtype=np.float64)
-                vel_ned = np.asarray(gnss_obj.vel_ned, dtype=np.float64) if gnss_obj.vel_ned is not None else None
-                try:
-                    updated_state, mahalanobis = pipeline.fusion_engine.update_gnss(pos_ned, vel_ned)
-                except Exception as e:
-                    # include shapes in error for debugging
-                    shp_pos = getattr(pos_ned, "shape", None)
-                    shp_vel = getattr(vel_ned, "shape", None)
-                    raise HTTPException(status_code=500, detail=f"fusion update_gnss error: {e} pos.shape={shp_pos} vel.shape={shp_vel}")
+
+        elif gnss_obj.pos_ned is not None:
+            # Direct NED sample provided
+            pos_ned = np.asarray(gnss_obj.pos_ned, dtype=np.float64)
+            vel_ned = np.asarray(gnss_obj.vel_ned, dtype=np.float64) if gnss_obj.vel_ned is not None else None
+            try:
+                updated_state, mahalanobis = pipeline.fusion_engine.update_gnss(pos_ned, vel_ned)
+            except Exception as e:
+                # include shapes in error for debugging
+                shp_pos = getattr(pos_ned, "shape", None)
+                shp_vel = getattr(vel_ned, "shape", None)
+                raise HTTPException(status_code=500, detail=f"fusion update_gnss error: {e} pos.shape={shp_pos} vel.shape={shp_vel}")
 
     # Compute AI (neural) predicted velocity from pipeline neural model if available
     try:
